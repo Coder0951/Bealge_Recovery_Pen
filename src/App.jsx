@@ -11,7 +11,7 @@ import './App.css';
 
 function App() {
   const [mode, setMode] = useState('icu'); // 'icu' | 'recovery' | 'grad' | 'optimal'
-  const [beagleSize, setBeagleSize] = useState({ shoulder: 12, length: 24, weight: 28 });
+  const [beagleSize, setBeagleSize] = useState({ shoulder: 14, length: 20, weight: 25 });
   const [safetyMode, setSafetyMode] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(true);
   const [viewMode, setViewMode] = useState('perspective'); // 'perspective' | 'topDown'

@@ -21,11 +21,15 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
   const [beagleRotY, setBeagleRotY] = useState(0);
   const [targetIndex, setTargetIndex] = useState(0);
   const [holdTimer, setHoldTimer] = useState(0);
-  const simRef = useRef({ running: false, speed: 12 }); // inches per second
+  const simRef = useRef({ running: false, speed: 12, stuckTimer: 0 }); // inches per second
 
   const gridSize = 0.25; // inches (finer grid)
   const ROTATION_STEP = 45; // degrees
   const NUDGE_STEP = 0.25; // inches
+  // effective beagle length: shorter by 2 inches for the actor
+  const effectiveBeagleLength = Math.max(12, (beagleSize.length || 24) - 2);
+  // Pen bounds (match Playpen PEN_SIZE=50) - leave a small margin
+  const PEN_HALF = 24.5;
 
   function handleItemPointerDown(e, itemId) {
     if (!layoutApi) return;
@@ -132,46 +136,54 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
     setSelectedId(null);
   }
 
-  // Build navigation targets from layout (bed -> bowls -> pads)
+  // Build navigation targets: perimeter loop + beds (bowls intentionally excluded)
   const navTargets = useMemo(() => {
     const list = [];
     try {
-      // Prefer the editable/effective layout; if it's empty (design mode cleared), fall back to preset
       const sourceLayout = (effectiveLayout && ((effectiveLayout.beds||[]).length || (effectiveLayout.bowls||[]).length || (effectiveLayout.pads||[]).length))
         ? effectiveLayout
         : (layout || {});
       const beds = (sourceLayout.beds || []).filter(b => b && b.position);
-      const bowls = (sourceLayout.bowls || []).filter(b => b && b.position);
-      const pads = (sourceLayout.pads || []).filter(p => p && p.position);
-      if (beds.length) list.push(beds[0].position);
-      for (const b of bowls) list.push(b.position);
-      for (const p of pads) list.push(p.position);
-      if (beds.length) list.push(beds[0].position);
+
+      // Perimeter loop (inside the playpen). PEN size is about 50"; use inset R
+      const R = 22;
+      const perimeter = [
+        [-R, 0, -R],
+        [R, 0, -R],
+        [R, 0, R],
+        [-R, 0, R]
+      ];
+
+      for (const p of perimeter) list.push(p);
+      for (const b of beds) list.push(b.position);
     } catch (e) {}
     return list;
   }, [effectiveLayout]);
 
   // Simple navigation loop when simulation is enabled (controlled via global prop on layoutApi if present)
   useFrame((state, delta) => {
-    const running = typeof simulationRunning !== 'undefined' ? simulationRunning : (layoutApi && !!layoutApi.simulationRunning);
+    const running = typeof simulationRunning !== 'undefined'
+      ? simulationRunning
+      : ((layoutApi && !!layoutApi.simulationRunning) || !!animationEnabled);
     if (!running) return;
     simRef.current.running = true;
-    const speed = simRef.current.speed;
+    const speed = simRef.current.speed; // inches/sec
     if (!navTargets || !navTargets.length) return;
 
-    // initialize beagle pos to first bed if at origin
+    // initialize beagle pos at the entrance if still at origin
     if (beaglePos[0] === 0 && beaglePos[2] === 0) {
-      const start = navTargets[0] || [0,0,0];
-      setBeaglePos([start[0] - 6, 0.5, start[2]]);
+      const entranceX = -PEN_HALF + 1.5; // inside the door area
+      setBeaglePos([entranceX, 0.5, 0]);
     }
 
     const tgt = navTargets[targetIndex % navTargets.length];
     if (!tgt) return;
-    const dx = tgt[0] - beaglePos[0];
-    const dz = tgt[2] - beaglePos[2];
-    const dist = Math.hypot(dx, dz);
-    if (dist < 1.0) {
-      // arrived, hold briefly then advance
+
+    // desired velocity toward target
+    const toTgtX = tgt[0] - beaglePos[0];
+    const toTgtZ = tgt[2] - beaglePos[2];
+    const toDist = Math.hypot(toTgtX, toTgtZ);
+    if (toDist < 1.0) {
       setHoldTimer((ht) => {
         const next = ht + delta;
         if (next > 1.0) {
@@ -183,11 +195,116 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
       return;
     }
 
-    const vx = (dx / dist) * speed * delta;
-    const vz = (dz / dist) * speed * delta;
-    setBeaglePos(([x,y,z]) => [x + vx, y, z + vz]);
+    const desiredVX = (toTgtX / toDist) * speed;
+    const desiredVZ = (toTgtZ / toDist) * speed;
+
+    // obstacle avoidance: avoid bowl stands (treated as solid obstacles)
+    const obstacles = (effectiveLayout.bowls || []).filter(b => b && b.position);
+    let avoidX = 0, avoidZ = 0;
+    const dogRadius = Math.max(4, effectiveBeagleLength * 0.18); // ~4-6 inches radius
+    for (const ob of obstacles) {
+      const he = halfExtentsForItem(ob);
+      const ox = ob.position[0];
+      const oz = ob.position[2];
+      const dx = beaglePos[0] - ox;
+      const dz = beaglePos[2] - oz;
+      const dist = Math.hypot(dx, dz);
+      const clearance = Math.max(he.hw, he.hd) + dogRadius + 3; // 3" buffer for safer avoidance
+      if (dist < clearance && dist > 0.001) {
+        const push = (clearance - dist) / clearance; // 0..1
+        avoidX += (dx / dist) * push * speed * 1.8;
+        avoidZ += (dz / dist) * push * speed * 1.8;
+      }
+    }
+
+    // combine desired + avoidance
+    let vx = desiredVX + avoidX;
+    let vz = desiredVZ + avoidZ;
+    const vmag = Math.hypot(vx, vz);
+    if (vmag > 0.001) {
+      vx = (vx / vmag) * Math.min(vmag, speed);
+      vz = (vz / vmag) * Math.min(vmag, speed);
+    }
+
+    // step by delta
+    const stepX = vx * delta;
+    const stepZ = vz * delta;
+
+    // predictive collision with bowls: if next position overlaps a bowl, slide around
+    let nextX = beaglePos[0] + stepX;
+    let nextZ = beaglePos[2] + stepZ;
+    for (const ob of obstacles) {
+      const he = halfExtentsForItem(ob);
+      const ox = ob.position[0];
+      const oz = ob.position[2];
+      const dx = nextX - ox;
+      const dz = nextZ - oz;
+      const dist = Math.hypot(dx, dz);
+      const clearance = Math.max(he.hw, he.hd) + dogRadius + 0.5;
+      if (dist < clearance && dist > 0.001) {
+        // push perpendicular to approach to slide
+        const awayX = (dx / dist) * (clearance - dist);
+        const awayZ = (dz / dist) * (clearance - dist);
+        nextX += awayX;
+        nextZ += awayZ;
+      }
+    }
+
+    // Prevent leaving the pen or phasing through walls: clamp to interior bounds
+    const clampMin = -PEN_HALF + dogRadius;
+    const clampMax = PEN_HALF - dogRadius;
+    nextX = Math.max(clampMin, Math.min(clampMax, nextX));
+    nextZ = Math.max(clampMin, Math.min(clampMax, nextZ));
+
+    // adjust vertical position if walking onto a bed
+    let nextY = beaglePos[1];
+    const beds = (effectiveLayout.beds || []).filter(b => b && b.position);
+    let onBed = false;
+    for (const bed of beds) {
+      const he = halfExtentsForItem(bed);
+      const bx = bed.position[0];
+      const bz = bed.position[2];
+      if (Math.abs(nextX - bx) < he.hw && Math.abs(nextZ - bz) < he.hd) {
+        onBed = true;
+        const bedTop = (bed.type === 'full') ? 8 : 3; // full bed ~8", pad bed ~3"
+        // Reduce how high the actor is placed on the bed to avoid excessive lift.
+        const bedOffset = Math.max(0.5, dogRadius * 0.25);
+        nextY = bedTop + bedOffset;
+        break;
+      }
+    }
+
+    // floor default height
+    if (!onBed) nextY = Math.max(0.9, (dogRadius * 0.25));
+
+    // compute heading angle and a small lean based on turning rate
     const ang = Math.atan2(vx, vz) * 180 / Math.PI;
+    const prevAng = simRef.current.prevAng || ang;
+    let dAng = ang - prevAng;
+    dAng = ((dAng + 180) % 360) - 180; // normalize to [-180,180]
+    // lean in degrees (clamped), scaled from angular change
+    const leanDeg = Math.max(-25, Math.min(25, dAng * 0.35));
+    const leanRad = leanDeg * Math.PI / 180;
+
+    // detect if we're not making progress (stuck in corner) and attempt to nudge
+    const movedDistance = Math.hypot(nextX - beaglePos[0], nextZ - beaglePos[2]);
+    if (movedDistance < 0.05) {
+      simRef.current.stuckTimer = (simRef.current.stuckTimer || 0) + delta;
+    } else {
+      simRef.current.stuckTimer = 0;
+    }
+    if (simRef.current.stuckTimer > 0.6) {
+      // advance to next nav target and push toward pen center to escape corner
+      setTargetIndex((i) => (i + 1) % Math.max(1, navTargets.length));
+      nextX += (0 - nextX) * 0.2;
+      nextZ += (0 - nextZ) * 0.2;
+      simRef.current.stuckTimer = 0;
+    }
+
+    setBeaglePos(([x,y,z]) => [nextX, nextY, nextZ]);
     setBeagleRotY(ang);
+    simRef.current.prevAng = ang;
+    simRef.current.currentLean = leanRad;
   });
 
   const renderBed = (bed, index) => (
@@ -364,18 +481,51 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
           );
         })()
       )}
-      {/* Simulated beagle actor */}
+      {/* Simulated beagle actor (capsule body + head) */}
       {simulationRunning && (
-        <group position={[beaglePos[0], beaglePos[1], beaglePos[2]]} rotation={[0, (beagleRotY || 0) * Math.PI / 180, 0]}>
-          <mesh position={[0, 0.9, 0]} castShadow>
-            <sphereGeometry args={[2.2, 16, 12]} />
-            <meshStandardMaterial color="#c48b5c" />
-          </mesh>
-          <mesh position={[0, 1.8, 1.6]} castShadow>
-            <sphereGeometry args={[0.9, 12, 8]} />
-            <meshStandardMaterial color="#8b5a3c" />
-          </mesh>
-        </group>
+        (() => {
+          const bodyLength = Math.max(12, effectiveBeagleLength);
+          const bodyRadius = Math.max(3, effectiveBeagleLength * 0.16);
+          const cylHeight = Math.max(2, bodyLength - 2 * bodyRadius);
+          const baseY = beaglePos[1] || 1;
+          // body center relative to the group's base; baseY is the actor's footing
+          const bodyCenterY = bodyRadius;
+          const headOffsetZ = cylHeight / 2 + bodyRadius * 0.9;
+          const lean = simRef.current.currentLean || 0;
+          return (
+            <group position={[beaglePos[0], baseY, beaglePos[2]]} rotation={[0, (beagleRotY || 0) * Math.PI / 180, lean]}>
+              {/* body: cylinder along Z (rotate X by 90deg) */}
+              <group rotation={[Math.PI / 2, 0, 0]} position={[0, bodyCenterY, 0]}>
+                <mesh castShadow>
+                  <cylinderGeometry args={[bodyRadius, bodyRadius, cylHeight, 16]} />
+                  <meshStandardMaterial color="#c48b5c" />
+                </mesh>
+                {/* front hemisphere */}
+                <mesh position={[0, cylHeight / 2, 0]}>
+                  <sphereGeometry args={[bodyRadius, 16, 12]} />
+                  <meshStandardMaterial color="#c48b5c" />
+                </mesh>
+                {/* rear hemisphere */}
+                <mesh position={[0, -cylHeight / 2, 0]}>
+                  <sphereGeometry args={[bodyRadius, 16, 12]} />
+                  <meshStandardMaterial color="#c48b5c" />
+                </mesh>
+              </group>
+
+              {/* head */}
+              <mesh position={[0, bodyCenterY +  (bodyRadius * 0.2), headOffsetZ]} castShadow>
+                <sphereGeometry args={[bodyRadius * 0.6, 12, 10]} />
+                <meshStandardMaterial color="#8b5a3c" />
+              </mesh>
+
+              {/* simple tail */}
+              <mesh position={[0, bodyCenterY + 2, - (cylHeight / 2 + bodyRadius * 0.6)]} rotation={[0.5, 0, 0]}>
+                <cylinderGeometry args={[bodyRadius * 0.12, bodyRadius * 0.12, bodyRadius * 1.2, 8]} />
+                <meshStandardMaterial color="#8b5a3c" />
+              </mesh>
+            </group>
+          );
+        })()
       )}
     </group>
   );
