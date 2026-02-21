@@ -1,7 +1,7 @@
 import { useConfiguration } from '../src/hooks/useConfiguration.js';
 import { halfExtentsForItem, aabbOverlap, isOverlappingAny, findNonOverlappingPosition } from '../src/utils/collision.js';
 
-const MODES = ['icu','nest','corridor','open','grad'];
+const MODES = ['icu','recovery','grad'];
 const gridSize = 0.25;
 
 function layoutItems(layout) {

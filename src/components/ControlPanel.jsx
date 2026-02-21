@@ -53,9 +53,7 @@ export default function ControlPanel({
             <div className="grid grid-cols-1 gap-1">
               {[
                 { key: 'icu',      label: 'ICU',        sub: 'Days 1-3' },
-                { key: 'nest',     label: 'Nest',       sub: 'Days 4-7' },
-                { key: 'corridor', label: 'Corridor',   sub: 'Wk 2-3' },
-                { key: 'open',     label: 'Open Floor', sub: 'Wk 4-6' },
+                { key: 'recovery', label: 'Recovery',   sub: 'Wk 2-4' },
                 { key: 'grad',     label: 'Graduation', sub: 'Wk 8-12' },
               ].map((m) => (
                 <button

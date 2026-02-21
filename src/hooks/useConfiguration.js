@@ -208,7 +208,7 @@ export function useConfiguration(mode) {
   };
   
   // ═══════════════════════════════════════════════════════════════
-  // 5 VET-CONFIRMED RECOVERY PRESETS
+  // 3 VET-CONFIRMED RECOVERY PRESETS
   // Bed types: full (bolster + cushion) | pad (interior mat only)
   // Every preset: 3-zone separation (sleep / eat / eliminate)
   // Every preset: washable + disposable layered bathroom
@@ -219,113 +219,54 @@ export function useConfiguration(mode) {
   const configurations = {
 
     // ── 1. ICU — Days 1-3 (Acute Post-Op) ──────────────────────
-    // CRITICAL: Max foam, <3" steps, bathroom <48" from rest, bowls at vet-approved heights.
-    // MATH AUDIT: 2 full beds (29"×18") CANNOT sit side-by-side in 50" pen without overlap.
-    //   → Solution: 1 center full bed + 3 pads for maximum cushioned coverage.
-    // Uses: 1 full + 3 pads | 1 washable + 2 disposable
     icu: {
       beds: [
-        { position: [0, 0, -12], type: 'full' },       // Primary nest: center-back (29"×18": x=±14.5, z=-21 to -3)
-        { position: [-10, 0, 6], type: 'pad' },        // Left traction pad: front-left (25"×14", CLEAR of bed)
-        { position: [10, 0, 6], type: 'pad' },         // Right traction pad: front-right (symmetric support)
-        { position: [0, 0, 11], type: 'pad' },         // Front lounge pad: bathroom cushion (post-void rest)
+        { position: [0, 0, -14], type: 'full' },       // Primary nest
+        { position: [12.5, 0, 5], type: 'pad' },       // Right traction pad
+        { position: [-12.5, 0, 5], type: 'pad' },      // Left traction pad
       ],
       bowls: [
-        { position: [-18, 0, -4], height: 8.7 },       // Food: left wall, 8.7" optimal for eating
-        { position: [18, 0, -4], height: 4.9 },        // Water: right wall, 4.9" lower for easier hydration
+        { position: [-20, 0, -17], height: 8.7 },      // Food: Next to Full Bed
+        { position: [20, 0, -7], height: 4.9 },        // Water: Next to Pad
       ],
       pads: [
-        { position: [0, 0, 6], type: 'washable' },     // Primary bathroom: center-front (36" coverage)
-        { position: [0, 0, 6], type: 'disposable' },   // Layered hygiene: disposable on washable
-        { position: [-8, 0, 12], type: 'disposable' }, // Left backup zone: disoriented elimination
+        { position: [-7, 0, 7], type: 'washable' },    // Base layer
+        { position: [-12, 0, 14], type: 'disposable' },// Primary target
+        { position: [-12, 0, 2], type: 'disposable' }, // Secondary target
       ]
     },
 
-    // ── 2. Nest — Days 4-7 (Early Recovery) ────────────────────
-    // Protected exploration: Triangulated 3-zone layout encourages 18-26" gentle walks.
-    // MATH AUDIT: 1 full bed (29"×18") corner + 2 pads forward = safe stepping stones.
-    // Uses: 1 full + 2 pads | 1 washable + 2 disposable
-    nest: {
+    // ── 2. RECOVERY — Weeks 2-4 (Controlled Mobility) ──────────
+    recovery: {
       beds: [
-        { position: [-8, 0, -12], type: 'full' },      // Primary den: back-left (x=-22.5 to 6.5, z=-21 to -3)
-        { position: [11, 0, 2], type: 'pad' },         // Right-center pad: CLEAR of den (x=-1.5 to 23.5, z=-5 to 9)
-        { position: [-8, 0, 10], type: 'pad' },        // Left-front pad: bathroom approach (z=3 to 17, CLEAR)
+        { position: [-12.5, 0, -18], type: 'pad' },    // Left sleep area
+        { position: [12.5, 0, -18], type: 'pad' },     // Right sleep area
+        { position: [-10.5, 0, 8], type: 'full' },     // Front rest station
       ],
       bowls: [
-        { position: [18, 0, -8], height: 8.7 },        // Food: far right-back (32" walk from den)
-        { position: [18, 0, 4], height: 4.9 },         // Water: right-forward (lower for easier drinking)
+        { position: [-20, 0, -6], height: 8.7 },       // Food: Next to Left Pad
+        { position: [20, 0, -6], height: 4.9 },        // Water: Next to Right Pad
       ],
       pads: [
-        { position: [0, 0, 6], type: 'washable' },     // Primary bathroom: center-front
-        { position: [0, 0, 6], type: 'disposable' },   // Layered hygiene
-        { position: [8, 0, 12], type: 'disposable' },  // Right overspray zone
+        { position: [-7, 0, 7], type: 'washable' },    // Base layer
+        { position: [-12, 0, 14], type: 'disposable' },// Primary target
+        { position: [-12, 0, 2], type: 'disposable' }, // Secondary target
       ]
     },
 
-    // ── 3. Corridor — Weeks 2-3 (Guided Movement) ─────────────
-    // Dual rest stations: Controlled 24-36" pathways test gait stamina & coordination.
-    // MATH AUDIT: 2 full beds (29"×18") MUST be front-to-back, NOT side-by-side (overlap!).
-    //   → Solution: Station A (back) + Station B (front) with 20" z-separation = 2" clearance.
-    // Uses: 2 full + 2 pads | 1 washable + 3 disposable
-    corridor: {
-      beds: [
-        { position: [0, 0, -12], type: 'full' },       // Station A: center-back (x=±14.5, z=-21 to -3)
-        { position: [0, 0, 8], type: 'full' },         // Station B: center-front (x=±14.5, z=-1 to 17) → 2" gap!
-        { position: [-11, 0, -2], type: 'pad' },       // Left pathway: between stations (x=-23.5 to 1.5, CLEAR)
-        { position: [11, 0, -2], type: 'pad' },        // Right pathway: dual-corridor (x=-1.5 to 23.5, CLEAR)
-      ],
-      bowls: [
-        { position: [-18, 0, 0], height: 8.7 },        // Food: far left wall (equidistant from stations)
-        { position: [18, 0, 0], height: 4.9 },         // Water: far right wall (symmetric access)
-      ],
-      pads: [
-        { position: [0, 0, 6], type: 'washable' },     // Primary bathroom: overlaps Station B (allowed!)
-        { position: [0, 0, 6], type: 'disposable' },   // Layered hygiene
-        { position: [-8, 0, 12], type: 'disposable' }, // Left extension
-        { position: [8, 0, 12], type: 'disposable' },  // Right extension (full front coverage)
-      ]
-    },
-
-    // ── 4. Open Floor — Weeks 4-6 (Increasing Mobility) ───────
-    // Maximum movement space: 38-54" diagonal walks build cardiovascular endurance.
-    // MATH AUDIT: 1 full bed corner + 3 pads create non-overlapping stepping-stone grid.
-    // Uses: 1 full + 3 pads | 2 washable + 2 disposable
-    open: {
-      beds: [
-        { position: [-8, 0, -12], type: 'full' },      // Base camp: back-left (x=-22.5 to 6.5, z=-21 to -3)
-        { position: [11, 0, -6], type: 'pad' },        // Right-back pad: CLEAR of base (x=-1.5 to 23.5, z=-13 to 1)
-        { position: [-10, 0, 4], type: 'pad' },        // Left-center pad: forward (x=-22.5 to 2.5, z=-3 to 11)
-        { position: [10, 0, 6], type: 'pad' },         // Right-center pad: pathway choice (x=-2.5 to 22.5, z=-1 to 13)
-      ],
-      bowls: [
-        { position: [18, 0, -14], height: 8.7 },       // Food: far right-back (48" diagonal from base)
-        { position: [-18, 0, 10], height: 4.9 },       // Water: far left-front (56" diagonal, max cross-pen)
-      ],
-      pads: [
-        { position: [6, 0, 6], type: 'washable' },     // Bathroom A: right-front quadrant
-        { position: [6, 0, 6], type: 'disposable' },   // Layered hygiene
-        { position: [-6, 0, 6], type: 'washable' },    // Bathroom B: left-front quadrant
-        { position: [-6, 0, 6], type: 'disposable' },  // Prevents single-zone fixation
-      ]
-    },
-
-    // ── 5. Graduation — Weeks 8-12 (Pre-Release) ──────────────
-    // Pre-release readiness test: Minimal support, 55-62" extreme distances, spatial memory.
-    // VET ASSESSMENT: Can dog navigate opposite corners? Maintain elimination control? Ready?
-    // Uses: 1 full + 1 pad | 1 washable + 2 disposable
+    // ── 3. GRADUATION — Weeks 8-12 (Pre-Release) ───────────────
     grad: {
       beds: [
-        { position: [-8, 0, -12], type: 'full' },      // Home base: back-left corner (29"×18", secure retreat)
-        { position: [10, 0, 2], type: 'pad' },         // Optional rest: right-center (tests "do I need this?")
+        { position: [12.5, 0, -18], type: 'pad' },     // Sleep area
+        { position: [-10.5, 0, 16], type: 'full' },    // Front rest station
       ],
       bowls: [
-        { position: [18, 0, -14], height: 8.7 },       // Food: far right-back (57" diagonal from base)
-        { position: [-18, 0, 10], height: 4.9 },       // Water: far left-front (62" opposite corner, max endurance)
+        { position: [-20, 0, 2], height: 8.7 },        // Food: Next to Full Bed
+        { position: [20, 0, -6], height: 4.9 },        // Water: Next to Pad
       ],
       pads: [
-        { position: [0, 0, 6], type: 'washable' },     // Primary bathroom: center-front (36" coverage, reliable)
-        { position: [0, 0, 6], type: 'disposable' },   // Layered hygiene
-        { position: [10, 0, 12], type: 'disposable' }, // Right test zone: 22" precision target (learned behavior?)
+        { position: [-7, 0, -7], type: 'washable' },   // Base layer moved to back-left
+        { position: [-12, 0, -14], type: 'disposable' },// Single target
       ]
     }
   };

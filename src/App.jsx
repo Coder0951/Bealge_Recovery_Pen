@@ -10,7 +10,7 @@ import DragDropBridge from './components/DragDropBridge';
 import './App.css';
 
 function App() {
-  const [mode, setMode] = useState('icu'); // 'icu' | 'nest' | 'corridor' | 'open' | 'grad'
+  const [mode, setMode] = useState('icu'); // 'icu' | 'recovery' | 'grad'
   const [beagleSize, setBeagleSize] = useState({ shoulder: 12, length: 24, weight: 28 });
   const [safetyMode, setSafetyMode] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(true);
@@ -174,9 +174,7 @@ function App() {
         <span>Recovery Apartment</span>
         <span>Configuration: {{
           icu: 'ICU (Days 1-3)',
-          nest: 'Nest (Days 4-7)',
-          corridor: 'Corridor (Wk 2-3)',
-          open: 'Open Floor (Wk 4-6)',
+          recovery: 'Recovery (Wk 2-4)',
           grad: 'Graduation (Wk 8-12)'
         }[mode] || mode}</span>
         <span>View: {viewMode === 'perspective' ? 'Perspective' : 'Top-Down'}</span>
