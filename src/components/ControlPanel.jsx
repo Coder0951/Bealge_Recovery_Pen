@@ -13,6 +13,8 @@ export default function ControlPanel({
   setViewMode,
   designMode,
   setDesignMode,
+  simulationRunning,
+  setSimulationRunning,
   topDownLocked,
   setTopDownLocked
 }) {
@@ -132,7 +134,7 @@ export default function ControlPanel({
 
           <section className="control-panel-section">
             <h3>Features</h3>
-            <div className="space-y-2">
+              <div className="space-y-2">
               <label className="control-panel-toggle">
                 <span>Safety Audit Mode</span>
                 <input
@@ -149,14 +151,25 @@ export default function ControlPanel({
                   onChange={(e) => setAnimationEnabled(e.target.checked)}
                 />
               </label>
-              <label className="control-panel-toggle">
-                <span>Design Mode</span>
-                <input
-                  type="checkbox"
-                  checked={designMode}
-                  onChange={(e) => setDesignMode && setDesignMode(e.target.checked)}
-                />
-              </label>
+
+              <div>
+                <button
+                  onClick={() => setDesignMode && setDesignMode(!designMode)}
+                  className={`w-full py-2 rounded-md text-sm font-medium ${designMode ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+                  aria-pressed={designMode}
+                >
+                  {designMode ? 'Design Mode — Active' : 'Enter Design Mode'}
+                </button>
+              </div>
+              <div>
+                <button
+                  onClick={() => setSimulationRunning && setSimulationRunning(!simulationRunning)}
+                  className={`w-full mt-2 py-2 rounded-md text-sm font-medium ${simulationRunning ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+                  aria-pressed={simulationRunning}
+                >
+                  {simulationRunning ? 'Stop Simulation' : 'Simulate Beagle'}
+                </button>
+              </div>
             </div>
           </section>
 
@@ -294,10 +307,24 @@ export default function ControlPanel({
                       <span className="mr-2">Animation</span>
                       <input type="checkbox" checked={animationEnabled} onChange={(e) => setAnimationEnabled(e.target.checked)} />
                     </label>
-                    <label className="control-panel-toggle flex items-center justify-between">
-                      <span className="mr-2">Design Mode</span>
-                      <input type="checkbox" checked={designMode} onChange={(e) => setDesignMode && setDesignMode(e.target.checked)} />
-                    </label>
+                    <div>
+                      <button
+                        onClick={() => setDesignMode && setDesignMode(!designMode)}
+                        className={`w-full py-2 rounded-md text-sm font-medium ${designMode ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+                        aria-pressed={designMode}
+                      >
+                        {designMode ? 'Design Mode — Active' : 'Enter Design Mode'}
+                      </button>
+                    </div>
+                    <div>
+                      <button
+                        onClick={() => setSimulationRunning && setSimulationRunning(!simulationRunning)}
+                        className={`w-full py-2 rounded-md text-sm font-medium ${simulationRunning ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+                        aria-pressed={simulationRunning}
+                      >
+                        {simulationRunning ? 'Stop Simulation' : 'Simulate Beagle'}
+                      </button>
+                    </div>
                   </div>
                 </section>
 

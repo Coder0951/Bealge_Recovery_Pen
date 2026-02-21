@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
 import Playpen from './Playpen';
 import Bed from './Bed';
 import BowlStand from './BowlStand';
@@ -6,7 +7,7 @@ import PeePad from './PeePad';
 import { useConfiguration } from '../hooks/useConfiguration';
 import { isOverlappingAny, snapToGrid, halfExtentsForItem, clampToPen, findNonOverlappingPosition } from '../utils/collision';
 
-export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, layout: overrideLayout, layoutApi }) {
+export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, layout: overrideLayout, layoutApi, simulationRunning }) {
   const defaultLayout = useConfiguration(mode);
   const layout = overrideLayout || defaultLayout;
   const effectiveLayout = layoutApi ? layoutApi.layout : layout;
@@ -15,6 +16,12 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
   const [dragging, setDragging] = useState(false);
   const [ghostPos, setGhostPos] = useState(null);
   const [ghostValid, setGhostValid] = useState(true);
+  // Simulation state
+  const [beaglePos, setBeaglePos] = useState([0, 0, 0]);
+  const [beagleRotY, setBeagleRotY] = useState(0);
+  const [targetIndex, setTargetIndex] = useState(0);
+  const [holdTimer, setHoldTimer] = useState(0);
+  const simRef = useRef({ running: false, speed: 12 }); // inches per second
 
   const gridSize = 0.25; // inches (finer grid)
   const ROTATION_STEP = 45; // degrees
@@ -124,6 +131,64 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
     setDragging(false);
     setSelectedId(null);
   }
+
+  // Build navigation targets from layout (bed -> bowls -> pads)
+  const navTargets = useMemo(() => {
+    const list = [];
+    try {
+      // Prefer the editable/effective layout; if it's empty (design mode cleared), fall back to preset
+      const sourceLayout = (effectiveLayout && ((effectiveLayout.beds||[]).length || (effectiveLayout.bowls||[]).length || (effectiveLayout.pads||[]).length))
+        ? effectiveLayout
+        : (layout || {});
+      const beds = (sourceLayout.beds || []).filter(b => b && b.position);
+      const bowls = (sourceLayout.bowls || []).filter(b => b && b.position);
+      const pads = (sourceLayout.pads || []).filter(p => p && p.position);
+      if (beds.length) list.push(beds[0].position);
+      for (const b of bowls) list.push(b.position);
+      for (const p of pads) list.push(p.position);
+      if (beds.length) list.push(beds[0].position);
+    } catch (e) {}
+    return list;
+  }, [effectiveLayout]);
+
+  // Simple navigation loop when simulation is enabled (controlled via global prop on layoutApi if present)
+  useFrame((state, delta) => {
+    const running = typeof simulationRunning !== 'undefined' ? simulationRunning : (layoutApi && !!layoutApi.simulationRunning);
+    if (!running) return;
+    simRef.current.running = true;
+    const speed = simRef.current.speed;
+    if (!navTargets || !navTargets.length) return;
+
+    // initialize beagle pos to first bed if at origin
+    if (beaglePos[0] === 0 && beaglePos[2] === 0) {
+      const start = navTargets[0] || [0,0,0];
+      setBeaglePos([start[0] - 6, 0.5, start[2]]);
+    }
+
+    const tgt = navTargets[targetIndex % navTargets.length];
+    if (!tgt) return;
+    const dx = tgt[0] - beaglePos[0];
+    const dz = tgt[2] - beaglePos[2];
+    const dist = Math.hypot(dx, dz);
+    if (dist < 1.0) {
+      // arrived, hold briefly then advance
+      setHoldTimer((ht) => {
+        const next = ht + delta;
+        if (next > 1.0) {
+          setTargetIndex((i) => (i + 1) % Math.max(1, navTargets.length));
+          return 0;
+        }
+        return next;
+      });
+      return;
+    }
+
+    const vx = (dx / dist) * speed * delta;
+    const vz = (dz / dist) * speed * delta;
+    setBeaglePos(([x,y,z]) => [x + vx, y, z + vz]);
+    const ang = Math.atan2(vx, vz) * 180 / Math.PI;
+    setBeagleRotY(ang);
+  });
 
   const renderBed = (bed, index) => (
     <Bed
@@ -298,6 +363,19 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
             </mesh>
           );
         })()
+      )}
+      {/* Simulated beagle actor */}
+      {simulationRunning && (
+        <group position={[beaglePos[0], beaglePos[1], beaglePos[2]]} rotation={[0, (beagleRotY || 0) * Math.PI / 180, 0]}>
+          <mesh position={[0, 0.9, 0]} castShadow>
+            <sphereGeometry args={[2.2, 16, 12]} />
+            <meshStandardMaterial color="#c48b5c" />
+          </mesh>
+          <mesh position={[0, 1.8, 1.6]} castShadow>
+            <sphereGeometry args={[0.9, 12, 8]} />
+            <meshStandardMaterial color="#8b5a3c" />
+          </mesh>
+        </group>
       )}
     </group>
   );

@@ -10,12 +10,13 @@ import DragDropBridge from './components/DragDropBridge';
 import './App.css';
 
 function App() {
-  const [mode, setMode] = useState('optimal'); // 'icu' | 'recovery' | 'grad' | 'optimal'
+  const [mode, setMode] = useState('icu'); // 'icu' | 'recovery' | 'grad' | 'optimal'
   const [beagleSize, setBeagleSize] = useState({ shoulder: 12, length: 24, weight: 28 });
   const [safetyMode, setSafetyMode] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(true);
   const [viewMode, setViewMode] = useState('perspective'); // 'perspective' | 'topDown'
   const [designMode, setDesignMode] = useState(false);
+  const [simulationRunning, setSimulationRunning] = useState(false);
   const [prevViewMode, setPrevViewMode] = useState(null);
   const [topDownLocked, setTopDownLocked] = useState(false);
 
@@ -122,6 +123,7 @@ function App() {
               animationEnabled={animationEnabled}
               layout={designMode ? layoutApi.layout : undefined}
               layoutApi={designMode ? layoutApi : undefined}
+              simulationRunning={simulationRunning}
             />
 
             {designMode && layoutApi && <DragDropBridge layoutApi={layoutApi} />}
@@ -164,11 +166,15 @@ function App() {
         setViewMode={setViewMode}
         designMode={designMode}
         setDesignMode={toggleDesignMode}
+        simulationRunning={simulationRunning}
+        setSimulationRunning={setSimulationRunning}
         topDownLocked={topDownLocked}
         setTopDownLocked={setTopDownLocked}
       />
 
       {designMode && <DesignEditor layoutApi={layoutApi} />}
+
+
 
       <div className="data-strip">
         <span>Recovery Apartment</span>

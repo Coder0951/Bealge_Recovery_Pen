@@ -218,21 +218,19 @@ export function useConfiguration(mode) {
 
   const configurations = {
 
-    // ── 1. ICU — Days 1-3 (Acute Post-Op) ──────────────────────
+    // ── 1. ICU — Days 1-3 (Acute Post-Op) — customized by user ──
     icu: {
       beds: [
-        { position: [0, 0, -14], type: 'full' },       // Primary nest
-        { position: [12.5, 0, 5], type: 'pad' },       // Right traction pad
-        { position: [-12.5, 0, 5], type: 'pad' },      // Left traction pad
+        { rotationY: 0, position: [-9, 0, -16], type: 'full' },
+        { rotationY: 270, position: [13, 0, -11], type: 'pad' }
       ],
       bowls: [
-        { position: [-20, 0, -17], height: 8.7 },      // Food: Next to Full Bed
-        { position: [20, 0, -7], height: 4.9 },        // Water: Next to Pad
+        { rotationY: 180, position: [-9, 0, -2], height: 4.9 },
+        { rotationY: 180, position: [1, 0, -2], height: 4.9 }
       ],
       pads: [
-        { position: [-7, 0, 7], type: 'washable' },    // Base layer
-        { position: [-12, 0, 14], type: 'disposable' },// Primary target
-        { position: [-12, 0, 2], type: 'disposable' }, // Secondary target
+        { rotationY: 0, position: [-6, 0, 7], type: 'washable' },
+        { rotationY: 0, position: [-13, 0, 14], type: 'disposable' }
       ]
     },
 
