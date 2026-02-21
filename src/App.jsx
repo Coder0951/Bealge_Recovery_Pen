@@ -10,7 +10,7 @@ import DragDropBridge from './components/DragDropBridge';
 import './App.css';
 
 function App() {
-  const [mode, setMode] = useState('icu'); // 'icu' | 'recovery' | 'grad'
+  const [mode, setMode] = useState('optimal'); // 'icu' | 'recovery' | 'grad' | 'optimal'
   const [beagleSize, setBeagleSize] = useState({ shoulder: 12, length: 24, weight: 28 });
   const [safetyMode, setSafetyMode] = useState(false);
   const [animationEnabled, setAnimationEnabled] = useState(true);
@@ -175,7 +175,8 @@ function App() {
         <span>Configuration: {{
           icu: 'ICU (Days 1-3)',
           recovery: 'Recovery (Wk 2-4)',
-          grad: 'Graduation (Wk 8-12)'
+          grad: 'Graduation (Wk 8-12)',
+          optimal: 'Optimal (Balanced)'
         }[mode] || mode}</span>
         <span>View: {viewMode === 'perspective' ? 'Perspective' : 'Top-Down'}</span>
       </div>

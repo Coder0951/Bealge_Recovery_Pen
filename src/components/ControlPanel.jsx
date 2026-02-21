@@ -17,6 +17,7 @@ export default function ControlPanel({
   setTopDownLocked
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const handleScreenshot = () => {
     const canvas = document.querySelector('canvas');
@@ -34,8 +35,9 @@ export default function ControlPanel({
   };
 
   return (
-    <div className="control-panel-shell">
-      <div className="control-panel-header">
+    <>
+      <div className="control-panel-shell hidden sm:block">
+        <div className="control-panel-header">
         <h2 className="control-panel-title">Recovery Apartment</h2>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -55,6 +57,7 @@ export default function ControlPanel({
                 { key: 'icu',      label: 'ICU',        sub: 'Days 1-3' },
                 { key: 'recovery', label: 'Recovery',   sub: 'Wk 2-4' },
                 { key: 'grad',     label: 'Graduation', sub: 'Wk 8-12' },
+                { key: 'optimal',  label: 'Optimal',    sub: 'Balanced' },
               ].map((m) => (
                 <button
                   key={m.key}
@@ -205,6 +208,107 @@ export default function ControlPanel({
           )}
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Mobile: FAB + Bottom Sheet (below 640px) */}
+      <div className="sm:hidden">
+        <button
+          aria-label="Open controls"
+          onClick={() => setIsMobileOpen(true)}
+          className="fixed right-4 bottom-4 z-50 inline-flex items-center justify-center h-12 w-12 rounded-full bg-indigo-600 text-white shadow-lg"
+        >
+          ⚙️
+        </button>
+
+        {isMobileOpen && (
+          <div className="fixed inset-0 z-40 flex items-end">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setIsMobileOpen(false)}
+              aria-hidden
+            />
+            <div className="relative w-full max-h-[80vh] overflow-auto bg-white rounded-t-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold">Controls</h3>
+                <button
+                  onClick={() => setIsMobileOpen(false)}
+                  aria-label="Close controls"
+                  className="text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Reuse same body UI (compact) */}
+              <div className="space-y-3 text-sm">
+                <section>
+                  <h4 className="font-medium">Recovery Phase</h4>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {[
+                      { key: 'icu',      label: 'ICU' },
+                      { key: 'recovery', label: 'Recovery' },
+                      { key: 'grad',     label: 'Graduation' },
+                      { key: 'optimal',  label: 'Optimal' },
+                    ].map((m) => (
+                      <button
+                        key={m.key}
+                        onClick={() => setMode(m.key)}
+                        className={`control-panel-btn ${mode === m.key ? 'control-panel-btn--active' : ''} p-2 text-left`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="font-medium">View</h4>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => {
+                        if (topDownLocked) return;
+                        setViewMode(viewMode === 'perspective' ? 'topDown' : 'perspective');
+                      }}
+                      className="control-panel-btn control-panel-btn--ghost p-2 flex-1"
+                      disabled={topDownLocked}
+                    >
+                      {topDownLocked ? '🔒 Top-Down' : (viewMode === 'perspective' ? '📐 Top-Down' : '🎬 Perspective')}
+                    </button>
+                    <button
+                      onClick={() => setTopDownLocked && setTopDownLocked(!topDownLocked)}
+                      className="control-panel-btn control-panel-btn--ghost p-2"
+                    >
+                      {topDownLocked ? '🔓' : '🔒'}
+                    </button>
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="font-medium">Features</h4>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <label className="control-panel-toggle flex items-center justify-between">
+                      <span className="mr-2">Safety Audit</span>
+                      <input type="checkbox" checked={safetyMode} onChange={(e) => setSafetyMode(e.target.checked)} />
+                    </label>
+                    <label className="control-panel-toggle flex items-center justify-between">
+                      <span className="mr-2">Animation</span>
+                      <input type="checkbox" checked={animationEnabled} onChange={(e) => setAnimationEnabled(e.target.checked)} />
+                    </label>
+                    <label className="control-panel-toggle flex items-center justify-between">
+                      <span className="mr-2">Design Mode</span>
+                      <input type="checkbox" checked={designMode} onChange={(e) => setDesignMode && setDesignMode(e.target.checked)} />
+                    </label>
+                  </div>
+                </section>
+
+                <div className="mt-3">
+                  <button onClick={handleScreenshot} className="w-full control-panel-btn">Take Screenshot</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

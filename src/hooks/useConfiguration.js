@@ -268,10 +268,26 @@ export function useConfiguration(mode) {
         { position: [-7, 0, -7], type: 'washable' },   // Base layer moved to back-left
         { position: [-12, 0, -14], type: 'disposable' },// Single target
       ]
+    },
+
+    // ── 4. OPTIMAL — Balanced Layout ───────────────────────────
+    optimal: {
+      beds: [
+        { position: [-10.5, 0, -16], type: 'full' },   // Main sleep area (Back Left)
+        { position: [12.5, 0, 0], type: 'pad' },       // Secondary lounge (Middle Right)
+      ],
+      bowls: [
+        { position: [-20, 0, -2], height: 8.7 },       // Food station (Left Wall)
+        { position: [-20, 0, 8], height: 4.9 },        // Water station (Left Wall)
+      ],
+      pads: [
+        { position: [-7, 0, 14], type: 'washable' },   // Base layer (Front Left)
+        { position: [-14, 0, 16], type: 'disposable' },// Primary target
+      ]
     }
   };
 
   // Get configuration and apply boundary constraints
-  const rawConfig = configurations[mode] || configurations.icu;
+  const rawConfig = configurations[mode] || configurations.optimal;
   return applyConstraints(rawConfig);
 }
