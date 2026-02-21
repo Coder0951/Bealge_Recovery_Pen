@@ -1,16 +1,29 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { useBox, useSphere } from '@react-three/cannon';
 import Playpen from './Playpen';
 import Bed from './Bed';
 import BowlStand from './BowlStand';
 import PeePad from './PeePad';
+import DogSkeleton from './DogSkeleton';
 import { useConfiguration } from '../hooks/useConfiguration';
 import { isOverlappingAny, snapToGrid, halfExtentsForItem, clampToPen, findNonOverlappingPosition } from '../utils/collision';
+
+const BED_DIMENSIONS = {
+  full: { width: 29, depth: 18, height: 8 },
+  pad: { width: 25, depth: 14, height: 3 }
+};
+const BOWL_DIMENSIONS = { width: 10, depth: 10 };
+const REALISTIC_MODEL_PATH = '/assets/dog-realistic.glb';
+const REALISTIC_TEXTURE_PATHS = Object.freeze({ albedo: '', normal: '', roughness: '' });
+const OUTSIDE_START_OFFSET = 4; // how far outside the pen the actor begins
 
 export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, layout: overrideLayout, layoutApi, simulationRunning }) {
   const defaultLayout = useConfiguration(mode);
   const layout = overrideLayout || defaultLayout;
   const effectiveLayout = layoutApi ? layoutApi.layout : layout;
+
+  const collisionNormalRef = useRef(null);
 
   const [selectedId, setSelectedId] = useState(null);
   const [dragging, setDragging] = useState(false);
@@ -21,13 +34,15 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
   const [beagleRotY, setBeagleRotY] = useState(0);
   const [targetIndex, setTargetIndex] = useState(0);
   const [holdTimer, setHoldTimer] = useState(0);
-  const simRef = useRef({ running: false, speed: 12, stuckTimer: 0 }); // inches per second
+  const [speed, setSpeed] = useState(12);
+  const simRef = useRef({ running: false, stuckTimer: 0 }); // inches per second
 
   const gridSize = 0.25; // inches (finer grid)
   const ROTATION_STEP = 45; // degrees
   const NUDGE_STEP = 0.25; // inches
-  // effective beagle length: shorter by 2 inches for the actor
-  const effectiveBeagleLength = Math.max(12, (beagleSize.length || 24) - 2);
+  const MAT_SURFACE = 2.3; // top surface height of the floor mat
+  // effective beagle length: shorter by 4 inches for the actor (make a bit shorter)
+  const effectiveBeagleLength = Math.max(12, (beagleSize.length || 24) - 4);
   // Pen bounds (match Playpen PEN_SIZE=50) - leave a small margin
   const PEN_HALF = 24.5;
 
@@ -140,25 +155,22 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
   const navTargets = useMemo(() => {
     const list = [];
     try {
-      const sourceLayout = (effectiveLayout && ((effectiveLayout.beds||[]).length || (effectiveLayout.bowls||[]).length || (effectiveLayout.pads||[]).length))
-        ? effectiveLayout
-        : (layout || {});
-      const beds = (sourceLayout.beds || []).filter(b => b && b.position);
-
-      // Perimeter loop (inside the playpen). PEN size is about 50"; use inset R
-      const R = 22;
+      const beds = (effectiveLayout?.beds || []).filter(b => b && b.position);
+      const circleMargin = Math.max(3, Math.min(8, effectiveBeagleLength * 0.18));
+      list.push([0, 0, PEN_HALF - 2]); // rear-center target
       const perimeter = [
-        [-R, 0, -R],
-        [R, 0, -R],
-        [R, 0, R],
-        [-R, 0, R]
+        [-PEN_HALF + circleMargin, 0, PEN_HALF - circleMargin], // rear-left
+        [-PEN_HALF + circleMargin, 0, -PEN_HALF + circleMargin], // front-left
+        [PEN_HALF - circleMargin, 0, -PEN_HALF + circleMargin], // front-right
+        [PEN_HALF - circleMargin, 0, PEN_HALF - circleMargin] // rear-right
       ];
-
-      for (const p of perimeter) list.push(p);
-      for (const b of beds) list.push(b.position);
+      list.push(...perimeter);
+      for (const bed of beds) {
+        list.push([bed.position[0], 0, bed.position[2]]);
+      }
     } catch (e) {}
     return list;
-  }, [effectiveLayout]);
+  }, [effectiveLayout, effectiveBeagleLength]);
 
   // Simple navigation loop when simulation is enabled (controlled via global prop on layoutApi if present)
   useFrame((state, delta) => {
@@ -167,13 +179,12 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
       : ((layoutApi && !!layoutApi.simulationRunning) || !!animationEnabled);
     if (!running) return;
     simRef.current.running = true;
-    const speed = simRef.current.speed; // inches/sec
     if (!navTargets || !navTargets.length) return;
 
     // initialize beagle pos at the entrance if still at origin
     if (beaglePos[0] === 0 && beaglePos[2] === 0) {
-      const entranceX = -PEN_HALF + 1.5; // inside the door area
-      setBeaglePos([entranceX, 0.5, 0]);
+      const outsideX = -PEN_HALF - OUTSIDE_START_OFFSET; // start outside the door
+      setBeaglePos([outsideX, MAT_SURFACE, 0]);
     }
 
     const tgt = navTargets[targetIndex % navTargets.length];
@@ -202,6 +213,11 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
     const obstacles = (effectiveLayout.bowls || []).filter(b => b && b.position);
     let avoidX = 0, avoidZ = 0;
     const dogRadius = Math.max(4, effectiveBeagleLength * 0.18); // ~4-6 inches radius
+    const noseBuffer = Math.max(5, dogRadius * 1.5);
+    // approximate body/head radii for clamping and extents
+    const bodyRadiusLocal = Math.max(3, effectiveBeagleLength * 0.16);
+    const headRadiusLocal = bodyRadiusLocal * 0.6;
+    const actorExtent = Math.max(dogRadius, bodyRadiusLocal, headRadiusLocal, effectiveBeagleLength * 0.25);
     for (const ob of obstacles) {
       const he = halfExtentsForItem(ob);
       const ox = ob.position[0];
@@ -209,7 +225,7 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
       const dx = beaglePos[0] - ox;
       const dz = beaglePos[2] - oz;
       const dist = Math.hypot(dx, dz);
-      const clearance = Math.max(he.hw, he.hd) + dogRadius + 3; // 3" buffer for safer avoidance
+      const clearance = Math.max(he.hw, he.hd) + noseBuffer; // wider nose buffer keeps the snout away from corners
       if (dist < clearance && dist > 0.001) {
         const push = (clearance - dist) / clearance; // 0..1
         avoidX += (dx / dist) * push * speed * 1.8;
@@ -250,11 +266,20 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
       }
     }
 
-    // Prevent leaving the pen or phasing through walls: clamp to interior bounds
-    const clampMin = -PEN_HALF + dogRadius;
-    const clampMax = PEN_HALF - dogRadius;
+    // Prevent leaving the pen or phasing through walls: clamp to interior bounds using actor extent
+    const clampMargin = Math.min(noseBuffer * 0.4, 5);
+    const clampMin = -PEN_HALF + actorExtent + clampMargin;
+    const clampMax = PEN_HALF - actorExtent - clampMargin;
     nextX = Math.max(clampMin, Math.min(clampMax, nextX));
     nextZ = Math.max(clampMin, Math.min(clampMax, nextZ));
+
+    const collision = collisionNormalRef.current;
+    if (collision && Math.abs(collision.y) < 0.8) {
+      const push = Math.min(speed * 0.1, 0.5);
+      nextX += collision.x * push;
+      nextZ += collision.z * push;
+      collisionNormalRef.current = null;
+    }
 
     // adjust vertical position if walking onto a bed
     let nextY = beaglePos[1];
@@ -274,8 +299,8 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
       }
     }
 
-    // floor default height
-    if (!onBed) nextY = Math.max(0.9, (dogRadius * 0.25));
+    // floor default height (place on top of mat)
+    if (!onBed) nextY = MAT_SURFACE;
 
     // compute heading angle and a small lean based on turning rate
     const ang = Math.atan2(vx, vz) * 180 / Math.PI;
@@ -285,6 +310,18 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
     // lean in degrees (clamped), scaled from angular change
     const leanDeg = Math.max(-25, Math.min(25, dAng * 0.35));
     const leanRad = leanDeg * Math.PI / 180;
+
+    // gait/bob and bending to make motion more dog-like
+    const time = state.clock.getElapsedTime();
+    const speedFactor = Math.min(1, speed / 12);
+    const gaitFreq = 3.5 + speedFactor * 1.5;
+    const gaitAmp = 0.6 * speedFactor; // vertical bob amplitude (inches)
+    const bob = Math.sin(time * gaitFreq * 2) * gaitAmp;
+    // small fore-aft pitch when turning or accelerating
+    const bend = Math.max(-0.25, Math.min(0.25, (dAng * Math.PI / 180) * 0.08));
+
+    simRef.current.bob = bob;
+    simRef.current.bend = bend;
 
     // detect if we're not making progress (stuck in corner) and attempt to nudge
     const movedDistance = Math.hypot(nextX - beaglePos[0], nextZ - beaglePos[2]);
@@ -301,7 +338,7 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
       simRef.current.stuckTimer = 0;
     }
 
-    setBeaglePos(([x,y,z]) => [nextX, nextY, nextZ]);
+    setBeaglePos(([x,y,z]) => [nextX, y + (nextY - y) * 0.18, nextZ]);
     setBeagleRotY(ang);
     simRef.current.prevAng = ang;
     simRef.current.currentLean = leanRad;
@@ -475,58 +512,109 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
           const y = 2.3 + 1; // approximate surface + small height
           return (
             <mesh position={[ghostPos[0], y, ghostPos[2]]} raycast={() => null}>
-              <boxGeometry args={[w, 2, d]} />
+                    <boxGeometry args={[w, 2, d]} />
               <meshStandardMaterial color={ghostValid ? 'green' : 'red'} transparent opacity={0.35} />
             </mesh>
           );
         })()
       )}
-      {/* Simulated beagle actor (capsule body + head) */}
+      {/* Simulated beagle actor - articulated skeleton with simple IK */}
       {simulationRunning && (
-        (() => {
-          const bodyLength = Math.max(12, effectiveBeagleLength);
-          const bodyRadius = Math.max(3, effectiveBeagleLength * 0.16);
-          const cylHeight = Math.max(2, bodyLength - 2 * bodyRadius);
-          const baseY = beaglePos[1] || 1;
-          // body center relative to the group's base; baseY is the actor's footing
-          const bodyCenterY = bodyRadius;
-          const headOffsetZ = cylHeight / 2 + bodyRadius * 0.9;
-          const lean = simRef.current.currentLean || 0;
-          return (
-            <group position={[beaglePos[0], baseY, beaglePos[2]]} rotation={[0, (beagleRotY || 0) * Math.PI / 180, lean]}>
-              {/* body: cylinder along Z (rotate X by 90deg) */}
-              <group rotation={[Math.PI / 2, 0, 0]} position={[0, bodyCenterY, 0]}>
-                <mesh castShadow>
-                  <cylinderGeometry args={[bodyRadius, bodyRadius, cylHeight, 16]} />
-                  <meshStandardMaterial color="#c48b5c" />
-                </mesh>
-                {/* front hemisphere */}
-                <mesh position={[0, cylHeight / 2, 0]}>
-                  <sphereGeometry args={[bodyRadius, 16, 12]} />
-                  <meshStandardMaterial color="#c48b5c" />
-                </mesh>
-                {/* rear hemisphere */}
-                <mesh position={[0, -cylHeight / 2, 0]}>
-                  <sphereGeometry args={[bodyRadius, 16, 12]} />
-                  <meshStandardMaterial color="#c48b5c" />
-                </mesh>
-              </group>
-
-              {/* head */}
-              <mesh position={[0, bodyCenterY +  (bodyRadius * 0.2), headOffsetZ]} castShadow>
-                <sphereGeometry args={[bodyRadius * 0.6, 12, 10]} />
-                <meshStandardMaterial color="#8b5a3c" />
-              </mesh>
-
-              {/* simple tail */}
-              <mesh position={[0, bodyCenterY + 2, - (cylHeight / 2 + bodyRadius * 0.6)]} rotation={[0.5, 0, 0]}>
-                <cylinderGeometry args={[bodyRadius * 0.12, bodyRadius * 0.12, bodyRadius * 1.2, 8]} />
-                <meshStandardMaterial color="#8b5a3c" />
-              </mesh>
-            </group>
-          );
-        })()
+        <>
+          <ScenePhysics
+            beaglePos={beaglePos}
+            dogRadius={Math.max(4, effectiveBeagleLength * 0.18)}
+            layout={effectiveLayout}
+            matSurface={MAT_SURFACE}
+            onCollision={(normal) => {
+              if (normal) collisionNormalRef.current = normal;
+            }}
+          />
+          <Suspense fallback={null}>
+            <DogSkeleton
+              position={beaglePos}
+              rotationY={beagleRotY}
+              length={Math.max(12, effectiveBeagleLength)}
+              bodyRadius={Math.max(3, effectiveBeagleLength * 0.16)}
+              beds={effectiveLayout.beds}
+              matSurfaceHeight={MAT_SURFACE}
+              speed={speed}
+              modelPath={REALISTIC_MODEL_PATH}
+              realisticTexturePaths={REALISTIC_TEXTURE_PATHS}
+            />
+          </Suspense>
+        </>
       )}
     </group>
+  );
+}
+
+function StaticCollider({ position, width, depth, height, matSurface, metadata }) {
+  if (!position) return null;
+  const [ref] = useBox(() => ({
+    args: [width / 2, height / 2, depth / 2],
+    position: [position[0], matSurface + height / 2, position[2]],
+    type: 'Static'
+  }));
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.userData = metadata;
+    }
+  }, [ref, metadata]);
+  return <mesh ref={ref} visible={false} />;
+}
+
+function ScenePhysics({ beaglePos, dogRadius, layout, matSurface, onCollision }) {
+  const [ref, api] = useSphere(() => ({
+    args: [dogRadius],
+    type: 'Kinematic',
+    position: [beaglePos[0], beaglePos[1], beaglePos[2]],
+    onCollide: (event) => {
+      const normal = event.contact?.ni;
+      if (!normal) return;
+      if (Math.abs(normal.y) < 0.8) {
+        onCollision && onCollision({ x: normal.x, y: normal.y, z: normal.z });
+      }
+    }
+  }));
+
+  useFrame(() => {
+    if (!api) return;
+    api.position.set(beaglePos[0], beaglePos[1], beaglePos[2]);
+    api.velocity.set(0, 0, 0);
+  });
+
+  const beds = layout?.beds || [];
+  const bowls = layout?.bowls || [];
+
+  return (
+    <>
+      <mesh ref={ref} visible={false} />
+      {beds.map((bed, index) => {
+        const dims = BED_DIMENSIONS[bed.type] || BED_DIMENSIONS.pad;
+        return (
+          <StaticCollider
+            key={bed._id || `bed-collider-${index}`}
+            position={bed.position}
+            width={dims.width}
+            depth={dims.depth}
+            height={dims.height}
+            matSurface={matSurface}
+            metadata={{ surfaceHeight: matSurface + dims.height, object: 'bed' }}
+          />
+        );
+      })}
+      {bowls.map((bowl, index) => (
+        <StaticCollider
+          key={bowl._id || `bowl-collider-${index}`}
+          position={bowl.position}
+          width={BOWL_DIMENSIONS.width}
+          depth={BOWL_DIMENSIONS.depth}
+          height={(bowl.height || 5)}
+          matSurface={matSurface}
+          metadata={{ isObstacle: true, object: 'bowl' }}
+        />
+      ))}
+    </>
   );
 }

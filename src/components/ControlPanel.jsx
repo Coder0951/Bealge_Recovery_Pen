@@ -16,7 +16,7 @@ export default function ControlPanel({
   simulationRunning,
   setSimulationRunning,
   topDownLocked,
-  setTopDownLocked
+  setTopDownLocked,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);

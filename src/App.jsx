@@ -8,6 +8,7 @@ import useLayout from './hooks/useLayout';
 import { useConfiguration } from './hooks/useConfiguration';
 import DragDropBridge from './components/DragDropBridge';
 import './App.css';
+import { Physics } from '@react-three/cannon';
 
 function App() {
   const [mode, setMode] = useState('icu'); // 'icu' | 'recovery' | 'grad' | 'optimal'
@@ -19,7 +20,6 @@ function App() {
   const [simulationRunning, setSimulationRunning] = useState(false);
   const [prevViewMode, setPrevViewMode] = useState(null);
   const [topDownLocked, setTopDownLocked] = useState(false);
-
   const layoutApi = useLayout(mode);
 
   // helper to add stable ids to a layout object
@@ -116,15 +116,17 @@ function App() {
             <Environment preset="apartment" />
 
             {/* Scene with all 3D objects */}
-            <Scene
-              mode={mode}
-              beagleSize={beagleSize}
-              safetyMode={safetyMode}
-              animationEnabled={animationEnabled}
-              layout={designMode ? layoutApi.layout : undefined}
-              layoutApi={designMode ? layoutApi : undefined}
-              simulationRunning={simulationRunning}
-            />
+            <Physics gravity={[0, -30, 0]} allowSleep={false}>
+              <Scene
+                mode={mode}
+                beagleSize={beagleSize}
+                safetyMode={safetyMode}
+                animationEnabled={animationEnabled}
+                layout={designMode ? layoutApi.layout : undefined}
+                layoutApi={designMode ? layoutApi : undefined}
+                simulationRunning={simulationRunning}
+              />
+            </Physics>
 
             {designMode && layoutApi && <DragDropBridge layoutApi={layoutApi} />}
 
