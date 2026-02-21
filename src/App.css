@@ -1,0 +1,270 @@
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.35), transparent 30%),
+    radial-gradient(circle at 90% 5%, rgba(59, 130, 246, 0.35), transparent 25%),
+    linear-gradient(180deg, #030712 0%, #020617 45%, #0f172a 100%);
+  overflow: hidden;
+}
+
+.app-shell__halo {
+  position: absolute;
+  width: 42rem;
+  height: 42rem;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.5), rgba(59, 130, 246, 0));
+  top: -12rem;
+  right: -10rem;
+  filter: blur(2px);
+  opacity: 0.85;
+  z-index: 0;
+}
+
+.app-shell__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 120px 120px;
+  opacity: 0.35;
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+
+.canvas-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.2rem, 2.5vw, 3rem);
+  width: 100%;
+  z-index: 1;
+}
+
+.canvas-card {
+  position: relative;
+  width: min(1200px, 100%);
+  height: min(82vh, 900px);
+  border-radius: 32px;
+  background: rgba(2, 6, 23, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 40px 90px rgba(2, 6, 23, 0.85);
+  overflow: hidden;
+}
+
+.data-strip {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1.4rem;
+  padding: 0.35rem 1.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: #cbd5f5;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  backdrop-filter: blur(20px);
+  z-index: 3;
+}
+
+.control-panel-shell {
+  position: fixed;
+  top: 0;
+  right: 1rem;
+  bottom: 0;
+  height: 100vh;
+  width: min(16rem, calc(100vw - 2rem));
+  max-height: none;
+  padding: 1rem 1rem 1.25rem;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
+  border: 1px solid rgba(94, 234, 212, 0.25);
+  box-shadow: 0 30px 70px rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(32px);
+  color: #e2e8f0;
+  z-index: 5;
+  overflow-y: auto;
+}
+
+.control-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.control-panel-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+}
+
+.control-panel-collapse {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid transparent;
+  color: #e2e8f0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 12px;
+  font-size: 1.6rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.control-panel-collapse:hover {
+  background: rgba(148, 163, 184, 0.25);
+  border-color: rgba(94, 234, 212, 0.5);
+}
+
+.control-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+@media (max-width: 900px) {
+  .control-panel-shell {
+    position: fixed;
+    right: 0.85rem;
+    left: 0.85rem;
+    top: auto;
+    bottom: 1rem;
+    width: auto;
+    border-radius: 18px;
+    max-height: 60vh;
+  }
+
+  .data-strip {
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    bottom: 5.5rem;
+  }
+}
+
+.control-panel-section h3 {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 0.55rem;
+}
+
+.control-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.control-panel-btn {
+  border-radius: 14px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.7);
+  color: #cbd5f5;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.control-panel-btn:hover {
+  background: rgba(94, 234, 212, 0.15);
+  border-color: rgba(94, 234, 212, 0.6);
+}
+
+.control-panel-btn--active {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(59, 130, 246, 0.85));
+  border-color: transparent;
+  color: #0f172a;
+}
+
+.control-panel-btn--ghost {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.control-panel-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #e2e8f0;
+  margin-bottom: 0.2rem;
+}
+
+.control-panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.control-panel-toggle input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #38bdf8;
+}
+
+.control-panel-legend {
+  gap: 0.25rem;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.75rem;
+  color: #cbd5f5;
+}
+
+.legend-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.legend-dot--foam {
+  background: #475569;
+}
+
+.legend-dot--hygiene {
+  background: #38bdf8;
+}
+
+.legend-dot--nutrition {
+  background: #f59e0b;
+}
+
+.control-panel-warning {
+  background: rgba(244, 114, 182, 0.1);
+  border: 1px solid rgba(244, 114, 182, 0.4);
+  border-radius: 16px;
+  padding: 0.75rem;
+}
+
+.control-panel-warning h4 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.control-panel-warning ul {
+  list-style: disc;
+  padding-left: 1rem;
+  margin: 0;
+  font-size: 0.7rem;
+  color: #fecdd3;
+}
