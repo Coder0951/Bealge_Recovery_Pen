@@ -1,9 +1,12 @@
 // Basic AABB collision and snapping utilities
+export const PEN_FRAME_SIZE = 50; // outer poles
+export const PEN_INTERIOR_SIZE = 48; // mat footprint
+export const PEN_BOUNDARY = PEN_INTERIOR_SIZE / 2; // ±24"
 // Note: DIMENSIONS mirror those in `useConfiguration.js` — keep in sync if changed.
 export const DIMENSIONS = {
   fullBed: { width: 29, depth: 18 },
   padBed: { width: 25, depth: 14 },
-  washablePad: { width: 36, depth: 36 },
+  washablePad: { width: 47, depth: 47 },
   disposablePad: { width: 22, depth: 22 },
   bowlStand: { width: 10, depth: 10 }
 };
@@ -145,8 +148,6 @@ export function snapToGrid(position, gridSize = 1) {
   const snap = (v) => Math.round(v / gridSize) * gridSize;
   return [snap(x), y, snap(z)];
 }
-
-export const PEN_BOUNDARY = 25; // inches (half-size)
 
 export function clampToPen(position, halfExtents = { hw: 0, hd: 0 }) {
   const [x, y, z] = position;

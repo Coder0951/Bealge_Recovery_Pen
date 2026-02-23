@@ -1,7 +1,7 @@
-export function useConfiguration(mode) {
+import { PEN_FRAME_SIZE, PEN_INTERIOR_SIZE, PEN_BOUNDARY } from '../utils/collision.js';
+
+export function useConfiguration(mode, options = {}) {
   const MAT_HEIGHT = 2.3;
-  const PEN_SIZE = 50;
-  const PEN_BOUNDARY = PEN_SIZE / 2; // ±25"
   
   // Item dimensions (width x depth)
   const DIMENSIONS = {
@@ -32,7 +32,7 @@ export function useConfiguration(mode) {
     if (constrainedX !== x || constrainedZ !== z) {
       console.warn(
         `${itemName} at [${x}, ${z}] adjusted to [${constrainedX}, ${constrainedZ}] to fit within pen boundaries. ` +
-        `Item size: ${width}" × ${depth}", Pen size: ${PEN_SIZE}" × ${PEN_SIZE}"`
+        `Item size: ${width}" × ${depth}", Pen interior: ${PEN_INTERIOR_SIZE}" × ${PEN_INTERIOR_SIZE}" (frame ${PEN_FRAME_SIZE}" × ${PEN_FRAME_SIZE}")`
       );
     }
     
@@ -44,9 +44,9 @@ export function useConfiguration(mode) {
   // Keep a clear path: x: 0 to 25, z: 14 to 25 (11" deep clearance)
   const ENTRANCE_ZONE = {
     minX: 0,
-    maxX: PEN_BOUNDARY,    // 25
+    maxX: PEN_BOUNDARY,    // 24
     minZ: 14,
-    maxZ: PEN_BOUNDARY     // 25
+    maxZ: PEN_BOUNDARY     // 24
   };
   
   // Check if an item's AABB overlaps a rectangular zone
@@ -220,72 +220,77 @@ export function useConfiguration(mode) {
 
     // ── 1. ICU — Days 1-3 (Acute Post-Op) — customized by user ──
     icu: {
+      clamp: false,
       beds: [
-        { rotationY: 0, position: [-9, 0, -16], type: 'full' },
-        { rotationY: 270, position: [13, 0, -11], type: 'pad' }
+        { rotationY: 0, position: [-8, 0, -13], type: 'full' },
+        { rotationY: 270, position: [14.75, 0, -10], type: 'pad' }
       ],
       bowls: [
-        { rotationY: 180, position: [-9, 0, -2], height: 4.9 },
-        { rotationY: 180, position: [1, 0, -2], height: 4.9 }
+        { rotationY: 90, position: [-17, 0, 16], height: 4.9 },
+        { rotationY: 180, position: [-17, 0, 2], height: 4.9 }
       ],
       pads: [
-        { rotationY: 0, position: [-6, 0, 7], type: 'washable' },
-        { rotationY: 0, position: [-13, 0, 14], type: 'disposable' }
+        { rotationY: 0, position: [-12, 0, 12], type: 'disposable' },
+        { rotationY: 0, position: [-12.25, 0, -10], type: 'disposable' },
+        { rotationY: 0, position: [10.5, 0, -11], type: 'disposable' },
+        { rotationY: 0, position: [13, 0, 13], type: 'disposable' },
+        { rotationY: 0, position: [0, 0, 0], type: 'washable' }
       ]
     },
 
     // ── 2. RECOVERY — Weeks 2-4 (Controlled Mobility) ──────────
     recovery: {
+      clamp: false,
       beds: [
-        { position: [-12.5, 0, -18], type: 'pad' },    // Left sleep area
-        { position: [12.5, 0, -18], type: 'pad' },     // Right sleep area
-        { position: [-10.5, 0, 8], type: 'full' },     // Front rest station
+        { rotationY: 0, position: [-8.5, 0, -13.75], type: 'full' },
+        { rotationY: 270, position: [14.5, 0, -10.25], type: 'pad' }
       ],
       bowls: [
-        { position: [-20, 0, -6], height: 8.7 },       // Food: Next to Left Pad
-        { position: [20, 0, -6], height: 4.9 },        // Water: Next to Right Pad
+        { rotationY: 180, position: [-20, 0, 18], height: 4.9 },
+        { rotationY: 180, position: [-9.5, 0, 17.75], height: 4.9 }
       ],
       pads: [
-        { position: [-7, 0, 7], type: 'washable' },    // Base layer
-        { position: [-12, 0, 14], type: 'disposable' },// Primary target
-        { position: [-12, 0, 2], type: 'disposable' }, // Secondary target
+        { rotationY: 0, position: [-0.25, 0, 0], type: 'washable' }
       ]
     },
 
     // ── 3. GRADUATION — Weeks 8-12 (Pre-Release) ───────────────
     grad: {
+      clamp: false,
       beds: [
-        { position: [12.5, 0, -18], type: 'pad' },     // Sleep area
-        { position: [-10.5, 0, 16], type: 'full' },    // Front rest station
+        { rotationY: 90, position: [-13.5, 0, 8.75], type: 'full' },
+        { rotationY: 0, position: [-10.25, 0, -14.25], type: 'pad' },
+        { rotationY: 90, position: [3.25, 0, 9], type: 'pad' }
       ],
       bowls: [
-        { position: [-20, 0, 2], height: 8.7 },        // Food: Next to Full Bed
-        { position: [20, 0, -6], height: 4.9 },        // Water: Next to Pad
+        { rotationY: 270, position: [18.25, 0, -18], height: 4.9 },
+        { rotationY: 270, position: [18.25, 0, -8], height: 4.9 }
       ],
-      pads: [
-        { position: [-7, 0, -7], type: 'washable' },   // Base layer moved to back-left
-        { position: [-12, 0, -14], type: 'disposable' },// Single target
-      ]
+      pads: []
     },
 
     // ── 4. OPTIMAL — Balanced Layout ───────────────────────────
     optimal: {
       beds: [
-        { position: [-10.5, 0, -16], type: 'full' },   // Main sleep area (Back Left)
-        { position: [12.5, 0, 0], type: 'pad' },       // Secondary lounge (Middle Right)
+        { rotationY: 180, position: [-8, 0, 10.75], type: 'full' },
+        { rotationY: 0, position: [10, 0, -16], type: 'pad' }
       ],
       bowls: [
-        { position: [-20, 0, -2], height: 8.7 },       // Food station (Left Wall)
-        { position: [-20, 0, 8], height: 4.9 },        // Water station (Left Wall)
+        { rotationY: 0, position: [-18, 0, -19], height: 4.9 },
+        { rotationY: 0, position: [-8, 0, -19], height: 4.9 }
       ],
-      pads: [
-        { position: [-7, 0, 14], type: 'washable' },   // Base layer (Front Left)
-        { position: [-14, 0, 16], type: 'disposable' },// Primary target
-      ]
+      pads: []
     }
   };
 
   // Get configuration and apply boundary constraints
-  const rawConfig = configurations[mode] || configurations.optimal;
-  return applyConstraints(rawConfig);
+  const clampOverride = options.clamp;
+  const configDef = configurations[mode] || configurations.optimal;
+  const { clamp: presetClamp, ...layoutSeed } = configDef;
+  const shouldClamp = typeof clampOverride === 'boolean'
+    ? clampOverride
+    : typeof presetClamp === 'boolean'
+      ? presetClamp
+      : true;
+  return shouldClamp ? applyConstraints(layoutSeed) : layoutSeed;
 }

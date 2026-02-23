@@ -3,6 +3,8 @@ import { Grid } from '@react-three/drei';
 
 export default function Playpen({ safetyMode }) {
   const PEN_SIZE = 50;
+  const INTERIOR_SIZE = 48;
+  const INNER_OFFSET = (PEN_SIZE - INTERIOR_SIZE) / 2;
   const WALL_HEIGHT = 27;
   const TUBE_RADIUS = 0.75; // Thin tubes (finger-width)
   const MAT_HEIGHT = 2.3;
@@ -29,10 +31,10 @@ export default function Playpen({ safetyMode }) {
       />
       {/* Floor mat (Fengdulong 50x50x1.3) positioned 1.5" from door */}
       <mesh 
-        position={[GAP_SIZE / 2, 1 + 1.3 / 2, 0]} 
+        position={[GAP_SIZE / 2 - INNER_OFFSET, 1 + 1.3 / 2, 0]} 
         receiveShadow
       >
-        <boxGeometry args={[PEN_SIZE - GAP_SIZE, 1.3, PEN_SIZE]} />
+        <boxGeometry args={[INTERIOR_SIZE, 1.3, INTERIOR_SIZE]} />
         <meshStandardMaterial 
           color="#f8b4d9"
           roughness={0.9}
@@ -45,7 +47,7 @@ export default function Playpen({ safetyMode }) {
         position={[-(PEN_SIZE / 2 - GAP_SIZE / 2), PEN_FLOOR_HEIGHT / 2, 0]} 
         receiveShadow
       >
-        <boxGeometry args={[GAP_SIZE, PEN_FLOOR_HEIGHT, PEN_SIZE]} />
+        <boxGeometry args={[GAP_SIZE, PEN_FLOOR_HEIGHT, INTERIOR_SIZE]} />
         <meshStandardMaterial 
           color={safetyMode ? "#ef4444" : "#6b7280"}
           roughness={0.5}
@@ -184,8 +186,8 @@ export default function Playpen({ safetyMode }) {
 
       {/* Mesh walls - semi-transparent - all four sides identical */}
       {/* Left wall */}
-      <mesh position={[-PEN_SIZE/2, WALL_HEIGHT/2, 0]} rotation={[0, Math.PI/2, 0]}>
-        <planeGeometry args={[PEN_SIZE - 4, WALL_HEIGHT - 4]} />
+      <mesh position={[-INTERIOR_SIZE/2, WALL_HEIGHT/2, 0]} rotation={[0, Math.PI/2, 0]}>
+        <planeGeometry args={[INTERIOR_SIZE - 4, WALL_HEIGHT - 4]} />
         <meshStandardMaterial 
           color="#9ca3af"
           transparent
@@ -195,8 +197,8 @@ export default function Playpen({ safetyMode }) {
       </mesh>
       
       {/* Right wall */}
-      <mesh position={[PEN_SIZE/2, WALL_HEIGHT/2, 0]} rotation={[0, Math.PI/2, 0]}>
-        <planeGeometry args={[PEN_SIZE - 4, WALL_HEIGHT - 4]} />
+      <mesh position={[INTERIOR_SIZE/2, WALL_HEIGHT/2, 0]} rotation={[0, Math.PI/2, 0]}>
+        <planeGeometry args={[INTERIOR_SIZE - 4, WALL_HEIGHT - 4]} />
         <meshStandardMaterial 
           color="#9ca3af"
           transparent
@@ -206,8 +208,8 @@ export default function Playpen({ safetyMode }) {
       </mesh>
       
       {/* Back wall */}
-      <mesh position={[0, WALL_HEIGHT/2, -PEN_SIZE/2]} rotation={[0, 0, 0]}>
-        <planeGeometry args={[PEN_SIZE - 4, WALL_HEIGHT - 4]} />
+      <mesh position={[0, WALL_HEIGHT/2, -INTERIOR_SIZE/2]} rotation={[0, 0, 0]}>
+        <planeGeometry args={[INTERIOR_SIZE - 4, WALL_HEIGHT - 4]} />
         <meshStandardMaterial 
           color="#9ca3af"
           transparent
@@ -217,8 +219,8 @@ export default function Playpen({ safetyMode }) {
       </mesh>
       
       {/* Front wall */}
-      <mesh position={[0, WALL_HEIGHT/2, PEN_SIZE/2]} rotation={[0, 0, 0]}>
-        <planeGeometry args={[PEN_SIZE - 4, WALL_HEIGHT - 4]} />
+      <mesh position={[0, WALL_HEIGHT/2, INTERIOR_SIZE/2]} rotation={[0, 0, 0]}>
+        <planeGeometry args={[INTERIOR_SIZE - 4, WALL_HEIGHT - 4]} />
         <meshStandardMaterial 
           color="#9ca3af"
           transparent

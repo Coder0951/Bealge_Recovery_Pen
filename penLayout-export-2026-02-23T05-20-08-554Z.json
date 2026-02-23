@@ -1,0 +1,98 @@
+{
+  "beds": [
+    {
+      "rotationY": 0,
+      "position": [
+        -7.5,
+        0,
+        -14.5
+      ],
+      "type": "full"
+    },
+    {
+      "rotationY": 90,
+      "position": [
+        15,
+        0,
+        -10.75
+      ],
+      "type": "pad"
+    }
+  ],
+  "bowls": [
+    {
+      "rotationY": 90,
+      "position": [
+        -17.75,
+        0,
+        10
+      ],
+      "height": 4.9
+    },
+    {
+      "rotationY": 180,
+      "position": [
+        -17.75,
+        0,
+        -0.25
+      ],
+      "height": 4.9
+    }
+  ],
+  "pads": [
+    {
+      "rotationY": 0,
+      "position": [
+        -6,
+        0,
+        6
+      ],
+      "type": "washable"
+    },
+    {
+      "rotationY": 0,
+      "position": [
+        -6,
+        0,
+        -6
+      ],
+      "type": "washable"
+    },
+    {
+      "rotationY": 0,
+      "position": [
+        6,
+        0,
+        -6
+      ],
+      "type": "washable"
+    },
+    {
+      "rotationY": 0,
+      "position": [
+        6,
+        0,
+        6
+      ],
+      "type": "washable"
+    },
+    {
+      "rotationY": 0,
+      "position": [
+        -13,
+        0,
+        13
+      ],
+      "type": "disposable"
+    },
+    {
+      "rotationY": 0,
+      "position": [
+        9,
+        0,
+        13
+      ],
+      "type": "disposable"
+    }
+  ]
+}

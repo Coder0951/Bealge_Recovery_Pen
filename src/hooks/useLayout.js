@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useConfiguration } from './useConfiguration';
 
 const STORAGE_KEY = (mode) => `penLayout:${mode}`;
+const STORAGE_VERSION_KEY = (mode) => `penLayout:${mode}:version`;
+const LAYOUT_VERSION = '3';
 
 function withIds(seed) {
   const now = Date.now();
@@ -16,8 +18,11 @@ export default function useLayout(mode) {
   const defaultSeed = useConfiguration(mode);
   const [layout, setLayout] = useState(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY(mode));
-      if (raw) return JSON.parse(raw);
+      const persistedVersion = localStorage.getItem(STORAGE_VERSION_KEY(mode));
+      if (persistedVersion === LAYOUT_VERSION) {
+        const raw = localStorage.getItem(STORAGE_KEY(mode));
+        if (raw) return JSON.parse(raw);
+      }
     } catch (e) {
       // ignore
     }
@@ -27,23 +32,27 @@ export default function useLayout(mode) {
   const [placingId, setPlacingId] = useState(null);
 
   useEffect(() => {
-    // when mode changes, try to restore saved layout or reseed
+    // when mode changes, try to restore saved layout if version matches
     try {
-      const raw = localStorage.getItem(STORAGE_KEY(mode));
-      if (raw) {
-        setLayout(JSON.parse(raw));
-      } else {
-        setLayout(withIds(useConfiguration(mode)));
+      const persistedVersion = localStorage.getItem(STORAGE_VERSION_KEY(mode));
+      if (persistedVersion === LAYOUT_VERSION) {
+        const raw = localStorage.getItem(STORAGE_KEY(mode));
+        if (raw) {
+          setLayout(JSON.parse(raw));
+          return;
+        }
       }
     } catch (e) {
-      setLayout(withIds(useConfiguration(mode)));
+      // ignore
     }
+    setLayout(withIds(useConfiguration(mode)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY(mode), JSON.stringify(layout));
+      localStorage.setItem(STORAGE_VERSION_KEY(mode), LAYOUT_VERSION);
     } catch (e) {
       // ignore
     }

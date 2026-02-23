@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { snapToGrid } from '../utils/collision';
+import { snapToGrid } from '../utils/collision.js';
 
 export default function DragDropBridge({ layoutApi }) {
   const { camera, gl } = useThree();

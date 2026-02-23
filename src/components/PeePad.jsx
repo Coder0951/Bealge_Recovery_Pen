@@ -3,7 +3,7 @@ export default function PeePad({ position, type, safetyMode, onPointerDown, rota
   const MAT_THICKNESS = 1.3;
   const MAT_SURFACE_HEIGHT = PEN_FLOOR_HEIGHT + MAT_THICKNESS; // 2.3"
   const isWashable = type === 'washable';
-  const size = isWashable ? 36 : 22;
+  const size = isWashable ? 47 : 22;
   const thickness = 0.2;
   
   // Pee pads lay flat ON the mat surface

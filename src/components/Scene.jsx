@@ -7,7 +7,7 @@ import BowlStand from './BowlStand';
 import PeePad from './PeePad';
 import DogSkeleton from './DogSkeleton';
 import { useConfiguration } from '../hooks/useConfiguration';
-import { isOverlappingAny, snapToGrid, halfExtentsForItem, clampToPen, findNonOverlappingPosition } from '../utils/collision';
+import { isOverlappingAny, snapToGrid, halfExtentsForItem, clampToPen, findNonOverlappingPosition, PEN_BOUNDARY } from '../utils/collision.js';
 
 const BED_DIMENSIONS = {
   full: { width: 29, depth: 18, height: 8 },
@@ -43,8 +43,8 @@ export default function Scene({ mode, beagleSize, safetyMode, animationEnabled, 
   const MAT_SURFACE = 2.3; // top surface height of the floor mat
   // effective beagle length: shorter by 4 inches for the actor (make a bit shorter)
   const effectiveBeagleLength = Math.max(12, (beagleSize.length || 24) - 4);
-  // Pen bounds (match Playpen PEN_SIZE=50) - leave a small margin
-  const PEN_HALF = 24.5;
+  // Pen bounds (match the 48" interior mat inside the 50" frame)
+  const PEN_HALF = PEN_BOUNDARY;
 
   function handleItemPointerDown(e, itemId) {
     if (!layoutApi) return;
